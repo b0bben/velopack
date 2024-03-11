@@ -219,6 +219,48 @@ exit 0
         Log.Info("Notarization completed successfully");
     }
 
+    public void Notarize(string filePath, string appleId, string appPassword, string teamId)
+    {
+        Log.Info($"Preparing to Notarize (with password). This will upload to Apple and usually takes minutes, [underline]but could take hours.[/]");
+
+        var args = new List<string> {
+            "notarytool",
+            "submit",
+            "-f", "json",
+            "--apple-id", appleId,
+            "--password", appPassword,
+            "--team-id", teamId,
+            "--wait",
+            filePath
+        };
+
+        var ntresultjson = Exe.InvokeProcess("xcrun", args, null);
+        Log.Info(ntresultjson.StdOutput);
+
+        // try to catch any notarization errors. if we have a submission id, retrieve notary logs.
+        try {
+            var ntresult = JsonConvert.DeserializeObject<NotaryToolResult>(ntresultjson.StdOutput);
+            if (ntresult?.status != "Accepted" || ntresultjson.ExitCode != 0) {
+                if (ntresult?.id != null) {
+                    var logargs = new List<string> {
+                        "notarytool",
+                        "log",
+                        ntresult?.id
+                    };
+
+                    var result = Exe.InvokeProcess("xcrun", logargs, null);
+                    Log.Warn(result.StdOutput);
+                }
+
+                throw new Exception("Notarization failed: " + ntresultjson.StdOutput);
+            }
+        } catch (JsonReaderException) {
+            throw new Exception("Notarization failed: " + ntresultjson.StdOutput);
+        }
+
+        Log.Info("Notarization completed successfully");
+    }
+
     public void Staple(string filePath)
     {
         Log.Debug($"Stapling Notarization to '{filePath}'");

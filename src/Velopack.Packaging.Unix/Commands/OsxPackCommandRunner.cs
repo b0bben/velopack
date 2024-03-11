@@ -57,13 +57,24 @@ public class OsxPackCommandRunner : PackageBuilder<OsxPackOptions>
     protected override Task CodeSign(Action<int> progress, string packDir)
     {
         var helper = new OsxBuildTools(Log);
+
+        var hasNotaryProfile = !string.IsNullOrEmpty(Options.NotaryProfile);
+        var hasNotaryAppPassword = (!string.IsNullOrEmpty(Options.NotaryAppleId) && !string.IsNullOrEmpty(Options.NotaryAppPassword) && !string.IsNullOrEmpty(Options.NotaryTeamId));
+
         // code signing all mach-o binaries
-        if (!string.IsNullOrEmpty(Options.SigningAppIdentity) && !string.IsNullOrEmpty(Options.NotaryProfile)) {
+        if (!string.IsNullOrEmpty(Options.SigningAppIdentity) && (hasNotaryProfile || hasNotaryAppPassword)) {
             progress(-1); // indeterminate
             var zipPath = Path.Combine(TempDir.FullName, "notarize.zip");
             helper.CodeSign(Options.SigningAppIdentity, Options.SigningEntitlements, packDir);
             helper.CreateDittoZip(packDir, zipPath);
-            helper.Notarize(zipPath, Options.NotaryProfile);
+
+            if (hasNotaryProfile) {
+                helper.Notarize(zipPath, Options.NotaryProfile);
+            } else if (hasNotaryAppPassword)
+            {
+                helper.Notarize(zipPath, Options.NotaryAppleId, Options.NotaryAppPassword, Options.NotaryTeamId);
+            }
+            
             helper.Staple(packDir);
             helper.SpctlAssessCode(packDir);
             File.Delete(zipPath);
@@ -94,10 +105,20 @@ public class OsxPackCommandRunner : PackageBuilder<OsxPackOptions>
             var packTitle = Options.PackTitle ?? Options.PackId;
             var packId = Options.PackId;
 
-            if (!string.IsNullOrEmpty(Options.SigningInstallIdentity) && !string.IsNullOrEmpty(Options.NotaryProfile)) {
+            var hasNotaryProfile = !string.IsNullOrEmpty(Options.NotaryProfile);
+            var hasNotaryAppPassword = (!string.IsNullOrEmpty(Options.NotaryAppleId) && !string.IsNullOrEmpty(Options.NotaryAppPassword) && !string.IsNullOrEmpty(Options.NotaryTeamId));
+
+            if (!string.IsNullOrEmpty(Options.SigningInstallIdentity) && (hasNotaryProfile || hasNotaryAppPassword)) {
                 helper.CreateInstallerPkg(packDir, packTitle, packId, pkgContent, pkgPath, Options.SigningInstallIdentity, Utility.CreateProgressDelegate(progress, 0, 60));
                 progress(-1); // indeterminate
-                helper.Notarize(pkgPath, Options.NotaryProfile);
+
+                if (hasNotaryProfile) {
+                    helper.Notarize(pkgPath, Options.NotaryProfile);
+                } else if (hasNotaryAppPassword)
+                {
+                    helper.Notarize(pkgPath, Options.NotaryAppleId, Options.NotaryAppPassword, Options.NotaryTeamId);
+                }
+
                 progress(80);
                 helper.Staple(pkgPath);
                 progress(90);

@@ -26,6 +26,12 @@ public class OsxPackCommand : OsxBundleCommand
 
     public string NotaryProfile { get; private set; }
 
+    public string NotaryAppleId { get; private set; }
+
+    public string NotaryAppPassword { get; private set; }
+
+    public string NotaryTeamId { get; private set; }
+
     public bool IncludePdb { get; set; }
 
     public OsxPackCommand()
@@ -78,6 +84,18 @@ public class OsxPackCommand : OsxBundleCommand
             .RequiresExtension(".entitlements");
 
         AddOption<string>((v) => NotaryProfile = v, "--notaryProfile")
+            .SetDescription("Name of profile containing Apple credentials stored with notarytool.")
+            .SetArgumentHelpName("NAME");
+
+        AddOption<string>((v) => NotaryAppleId = v, "--notaryAppleId")
+            .SetDescription("Name of profile containing Apple credentials stored with notarytool.")
+            .SetArgumentHelpName("NAME");
+
+        AddOption<string>((v) => NotaryAppPassword = v, "--notaryAppPassword")
+            .SetDescription("Name of profile containing Apple credentials stored with notarytool.")
+            .SetArgumentHelpName("NAME");
+
+        AddOption<string>((v) => NotaryTeamId = v, "--notaryTeamId")
             .SetDescription("Name of profile containing Apple credentials stored with notarytool.")
             .SetArgumentHelpName("NAME");
 
